@@ -1,14 +1,15 @@
 // import 'package:dear_diary_with_hive/controller/diary_controller.dart';
 // import 'package:dear_diary_with_hive/model/diary_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../controller/diary_controller.dart';
 import '../model/diary_model.dart';
-import 'diary_log_view.dart';
 import 'new_diary_log_view.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class NewEntryView extends StatefulWidget {
   @override
@@ -22,6 +23,45 @@ class _NewEntryViewState extends State<NewEntryView> {
   late String description;
   String? imagePath;
   var diaryController = DiaryController();
+  final ImagePicker _picker = ImagePicker();
+  XFile? _image;
+
+  Future<void> _pickImageFromGallery() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    setState(() {
+      _image = image;
+    });
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    setState(() {
+      _image = image;
+    });
+  }
+
+  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl() async {
+    if (_image == null) return null;
+    String? downloadURL = null;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return null;
+    final firebaseStorageRef = FirebaseStorage.instance
+        .ref()
+        .child('images/${currentUser.uid}/${_image!.name}');
+
+    try {
+      final uploadTask = await firebaseStorageRef.putFile(File(_image!.path));
+      if (uploadTask.state == TaskState.success) {
+        downloadURL = await firebaseStorageRef.getDownloadURL();
+
+        print("Uploaded to: $downloadURL");
+      }
+    } catch (e) {
+      print("Failed to upload image: $e");
+    }
+    return downloadURL;
+  }
+
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -39,6 +79,8 @@ class _NewEntryViewState extends State<NewEntryView> {
 
   void _saveDiaryEntry() async {
     description = descriptionController.text;
+    imagePath = await _uploadImageToFirebaseAndReturnDownlaodUrl();
+
     DiaryModel diaryEntry = DiaryModel(
         dateTime: selectedDate,
         description: description,
@@ -135,7 +177,18 @@ class _NewEntryViewState extends State<NewEntryView> {
                 ),
               ],
             ),
-            SizedBox(height: 100),
+            SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _pickImageFromGallery,
+              child: Text('Add Image from Gallery'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _pickImageFromCamera,
+              child: Text('Add Image from Camera'),
+            ),
+            SizedBox(height: 60),
+
             ElevatedButton(
               onPressed: _saveDiaryEntry,
               child: Text('Save Entry'),

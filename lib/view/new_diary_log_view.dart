@@ -19,7 +19,6 @@ class DiaryLogView extends StatefulWidget {
 
   @override
   State<DiaryLogView> createState() => _DiaryLogViewState();
-
 }
 
 class _DiaryLogViewState extends State<DiaryLogView> {
@@ -27,7 +26,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   final DiaryController diaryController = DiaryController();
   Month? selectedMonth;
   bool isDark = false;
-  late List<DiaryModel> filteredEntries;
+  List<DiaryModel> filteredEntries = [];
   final TextEditingController searchController = TextEditingController();
 
   void _showEditDialog(BuildContext context, DiaryModel diaryEntry, int index) {
@@ -80,10 +79,13 @@ class _DiaryLogViewState extends State<DiaryLogView> {
               onPressed: () {
                 // Save the edited content to the diary entry.
                 print("long pressed!");
-                diaryController.updateDiary(DiaryModel(
-                    description: descriptionEditingController.text,
-                    rating: int.parse(ratingEditingController.text),
-                    dateTime: DateTime.parse(dateEditingController.text)));
+                diaryController.updateDiary(
+                    diaryEntry.id,
+                    DiaryModel(
+                        description: descriptionEditingController.text,
+                        rating: int.parse(ratingEditingController.text),
+                        dateTime: DateTime.parse(dateEditingController.text),
+                        id: diaryEntry.id));
 
                 updateState();
                 Navigator.of(context).pop();
@@ -96,10 +98,10 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   }
 
   void updateState() async {
-    setState(() async {
-      final diaryEntries = await diaryController.getUserDiaries().first;
+    final diaryEntries = await diaryController.getUserDiaries().first;
 
-      filteredEntries = [];
+    setState(() {
+      // filteredEntries = [];
       if (selectedMonth?.Number == 0) {
         filteredEntries = diaryEntries;
       } else {
@@ -115,180 +117,205 @@ class _DiaryLogViewState extends State<DiaryLogView> {
     });
   }
 
+  void applyFilterAndUpdateState() async {
+    final diaryEntries = await diaryController.getUserDiaries().first;
+    // filteredEntries = [];
+    setState(() {
+      if (searchController.text == null) {
+        filteredEntries = diaryEntries;
+      } else {
+        filteredEntries = (searchController.text != null)
+            ? diaryEntries.where((entry) {
+                print(searchController.text);
+                return entry.description
+                    .toLowerCase()
+                    .contains(searchController.text.toLowerCase());
+              }).toList()
+            : diaryEntries;
+      }
+
+      // Sort the filtered entries in reverse chronological order (newest first)
+      filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData themeData = ThemeData(
         useMaterial3: true,
         brightness: isDark ? Brightness.dark : Brightness.light);
-
     return Theme(
-      data: themeData,
-      child: Scaffold(
+        data: themeData,
+        child: Scaffold(
 // App bar with a title and a logout button.
-        appBar: AppBar(
-          leading: IconButton(
-            icon: Icon(Icons.picture_as_pdf),
-            color: Colors.white,
-            onPressed: () async {
-              print("saved pdf file!");
-              await exportToPDF(diaryController);
-            },
-          ),
-          backgroundColor: Colors.deepPurple,
-          title: Text("Add Diary Entry",
-              style: GoogleFonts.pacifico(
-                color: Colors.white,
-                fontSize: 30.0,
-              )),
-          actions: [
-            IconButton(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: Icon(Icons.picture_as_pdf),
               color: Colors.white,
-              icon: Icon(Icons.logout),
-// Sign out the user on pressing the logout button.
               onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AuthGate(),
-                  ),
-                );
+                print("saved pdf file!");
+                await exportToPDF(diaryController);
               },
             ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(48.0),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SearchAnchor(
-                  builder: (BuildContext context, SearchController controller) {
-                    return SearchBar(
-                      controller: controller,
-                      padding: const MaterialStatePropertyAll<EdgeInsets>(
-                          EdgeInsets.symmetric(horizontal: 16.0)),
-                      onTap: () {
-                        controller.openView();
-                      },
-                      onChanged: (_) {
-                        controller.openView();
-                      },
-                      leading: const Icon(Icons.search),
-                      trailing: <Widget>[
-                        Tooltip(
-                          message: 'Change brightness mode',
-                          child: IconButton(
-                            isSelected: isDark,
-                            onPressed: () {
-                              setState(() {
-                                isDark = !isDark;
-                              });
-                            },
-                            icon: const Icon(Icons.wb_sunny_outlined),
-                            selectedIcon: const Icon(Icons.brightness_2_outlined),
-                          ),
-                        )
-                      ],
-                    );
-                  }, suggestionsBuilder:
-                  (BuildContext context, SearchController controller) {
-                return List<ListTile>.generate(5, (int index) {
-                  final String item = 'item $index';
-                  return ListTile(
-                    title: Text(item),
-                    onTap: () {
-                      setState(() {
-                        controller.closeView(item);
-                      });
-                    },
+            backgroundColor: Colors.deepPurple,
+            title: Text("Add Diary Entry",
+                style: GoogleFonts.pacifico(
+                  color: Colors.white,
+                  fontSize: 30.0,
+                )),
+            actions: [
+              IconButton(
+                color: Colors.white,
+                icon: Icon(Icons.logout),
+// Sign out the user on pressing the logout button.
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AuthGate(),
+                    ),
                   );
-                });
-              }),
+                },
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(48.0),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SearchAnchor(builder:
+                    (BuildContext context, SearchController controller) {
+                  return SearchBar(
+                    controller: searchController,
+                    padding: const MaterialStatePropertyAll<EdgeInsets>(
+                        EdgeInsets.symmetric(horizontal: 16.0)),
+                    onChanged: (_) {
+                      applyFilterAndUpdateState();
+                    },
+                    leading: IconButton(
+                        icon: Icon(Icons.search),
+                        onPressed: () async {
+                          applyFilterAndUpdateState();
+                        }),
+                    trailing: <Widget>[
+                      Tooltip(
+                        message: 'Change brightness mode',
+                        child: IconButton(
+                          isSelected: isDark,
+                          onPressed: () {
+                            setState(() {
+                              isDark = !isDark;
+                            });
+                          },
+                          icon: const Icon(Icons.wb_sunny_outlined),
+                          selectedIcon: const Icon(Icons.brightness_2_outlined),
+                        ),
+                      )
+                    ],
+                  );
+                }, suggestionsBuilder:
+                    (BuildContext context, SearchController controller) {
+                  return List<ListTile>.generate(5, (int index) {
+                    final String item = 'item $index';
+                    return ListTile(
+                      title: Text(item),
+                      onTap: () {
+                        setState(() {
+                          controller.closeView(item);
+                        });
+                      },
+                    );
+                  });
+                }),
+              ),
             ),
           ),
-        ),
 
 // Body of the widget using a StreamBuilder to listen for changes
-// in the cars collection and reflect them in the UI in real-time.
-        body: StreamBuilder<List<DiaryModel>>(
-          stream: diaryController.getUserDiaries(),
-          builder: (context, snapshot) {
+// in the diary collection and reflect them in the UI in real-time.
+          body: StreamBuilder<List<DiaryModel>>(
+            stream: diaryController.getUserDiaries(),
+            builder: (context, snapshot) {
 // Show a loading indicator until data is fetched from Firestore.
-            if (!snapshot.hasData) return CircularProgressIndicator();
-            final diaries = snapshot.data!;
-            diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+              if (!snapshot.hasData) return CircularProgressIndicator();
+              // final diaries = snapshot.data!;
+              // final diaries = filteredEntries;
+              final diaries =
+                  (!filteredEntries.isEmpty) ? filteredEntries : snapshot.data!;
 
-            return ListView.builder(
-              itemCount: diaries.length,
-              itemBuilder: (context, index) {
-                final entry = diaries[index];
+              diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
-                return Card(
-                  margin: EdgeInsets.all(8.0),
-                  child: GestureDetector(
-                    onLongPress: () {
-                      // Perform your action here when the Card is long-pressed.
-                      _showEditDialog(context, entry, index);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            entry.description,
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 15),
-                          Text(
-                            '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          SizedBox(height: 15),
-                          Row(
-                            children: [
-                              RatingEvaluator(entry),
-                              Spacer(),
-                              Spacer(),
-                              IconButton(
-                                icon: Icon(Icons.delete),
-                                color: Colors.black,
-                                onPressed: () {
-                                  // widget.diaryController.deleteDiaryAtIndex(index);
-                                  diaryController.deleteDiary(entry!.id);
+              return ListView.builder(
+                itemCount: diaries.length,
+                itemBuilder: (context, index) {
+                  final entry = diaries[index];
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => DiaryLogView(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                  return Card(
+                    margin: EdgeInsets.all(8.0),
+                    child: GestureDetector(
+                      onLongPress: () {
+                        // Perform your action here when the Card is long-pressed.
+                        _showEditDialog(context, entry, index);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.description,
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 15),
+                            Text(
+                              '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                            SizedBox(height: 15),
+                            Row(
+                              children: [
+                                RatingEvaluator(entry),
+                                Spacer(),
+                                Spacer(),
+                                IconButton(
+                                  icon: Icon(Icons.delete),
+                                  color: Colors.black,
+                                  onPressed: () {
+                                    // widget.diaryController.deleteDiaryAtIndex(index);
+                                    diaryController.deleteDiary(entry!.id);
+
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => DiaryLogView(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-// Floating action button to open a dialog for adding a new car.
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-// Display the AddCarDialog when the button is pressed.
-            showDialog(
-              context: context,
-              builder: (context) => NewEntryView(),
-            );
-          },
-          child: Icon(Icons.add),
-        ),
-      )
-    );
+                  );
+                },
+              );
+            },
+          ),
+// Floating action button to open a dialog for adding a new diary
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+// Display the AddNewDiary when the button is pressed.
+              showDialog(
+                context: context,
+                builder: (context) => NewEntryView(),
+              );
+            },
+            child: Icon(Icons.add),
+          ),
+        ));
   }
 }
 

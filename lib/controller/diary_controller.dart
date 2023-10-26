@@ -36,12 +36,11 @@ class DiaryController {
     return shouldAdd;
   }
 
-
-
-  /// Updates details of an existing [car] in Firestore.
-  Future<void> updateDiary(DiaryModel diary) async {
+  /// Updates details of an existing [diary] in Firestore.
+  Future<void> updateDiary(String? diaryToUpdateId, DiaryModel diary) async {
     return await diaryCollection.doc(diary.id).update(diary.toMap());
   }
+
   /// Deletes a car with the specified [id] from Firestore.
   Future<void> deleteDiary(String? id) async {
     return await diaryCollection.doc(id).delete();
