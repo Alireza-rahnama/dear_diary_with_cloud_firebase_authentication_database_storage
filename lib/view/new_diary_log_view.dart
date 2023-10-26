@@ -215,6 +215,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 // Show a loading indicator until data is fetched from Firestore.
             if (!snapshot.hasData) return CircularProgressIndicator();
             final diaries = snapshot.data!;
+            diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
             return ListView.builder(
               itemCount: diaries.length,
