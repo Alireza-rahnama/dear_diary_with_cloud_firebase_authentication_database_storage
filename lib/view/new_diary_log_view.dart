@@ -2,26 +2,33 @@ import 'package:dear_diary_with_firebase_auth_storage_database/view/auth_gate.da
 import 'package:flutter/material.dart';
 import 'package:dear_diary_with_firebase_auth_storage_database/controller/diary_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../model/diary_model.dart';
 import 'diary_entry_view.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 /// A stateless widget representing the main page where users can view
 /// and manage their cars after authentication.
 class DiaryLogView extends StatefulWidget {
 // Constructor to create a HomePage widget.
-  DiaryLogView({Key? key}) : super(key: key);
+  const DiaryLogView({Key? key}) : super(key: key);
 
   @override
   State<DiaryLogView> createState() => _DiaryLogViewState();
+
 }
 
 class _DiaryLogViewState extends State<DiaryLogView> {
 // Instance of CarService to interact with Firestore for CRUD operations on cars.
   final DiaryController diaryController = DiaryController();
   Month? selectedMonth;
+  bool isDark = false;
   late List<DiaryModel> filteredEntries;
+  final TextEditingController searchController = TextEditingController();
 
   void _showEditDialog(BuildContext context, DiaryModel diaryEntry, int index) {
     TextEditingController descriptionEditingController =
@@ -110,111 +117,176 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final ThemeData themeData = ThemeData(
+        useMaterial3: true,
+        brightness: isDark ? Brightness.dark : Brightness.light);
+
+    return Theme(
+      data: themeData,
+      child: Scaffold(
 // App bar with a title and a logout button.
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        title: Text("Add Diary Entry",
-            style: GoogleFonts.pacifico(
-              color: Colors.white,
-              fontSize: 30.0,
-            )),
-        actions: [
-          IconButton(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.picture_as_pdf),
             color: Colors.white,
-            icon: Icon(Icons.logout),
-// Sign out the user on pressing the logout button.
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AuthGate(),
-                ),
-              );
+              print("saved pdf file!");
+              await exportToPDF(diaryController);
             },
           ),
-        ],
-      ),
+          backgroundColor: Colors.deepPurple,
+          title: Text("Add Diary Entry",
+              style: GoogleFonts.pacifico(
+                color: Colors.white,
+                fontSize: 30.0,
+              )),
+          actions: [
+            IconButton(
+              color: Colors.white,
+              icon: Icon(Icons.logout),
+// Sign out the user on pressing the logout button.
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AuthGate(),
+                  ),
+                );
+              },
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(48.0),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: SearchAnchor(
+                  builder: (BuildContext context, SearchController controller) {
+                    return SearchBar(
+                      controller: controller,
+                      padding: const MaterialStatePropertyAll<EdgeInsets>(
+                          EdgeInsets.symmetric(horizontal: 16.0)),
+                      onTap: () {
+                        controller.openView();
+                      },
+                      onChanged: (_) {
+                        controller.openView();
+                      },
+                      leading: const Icon(Icons.search),
+                      trailing: <Widget>[
+                        Tooltip(
+                          message: 'Change brightness mode',
+                          child: IconButton(
+                            isSelected: isDark,
+                            onPressed: () {
+                              setState(() {
+                                isDark = !isDark;
+                              });
+                            },
+                            icon: const Icon(Icons.wb_sunny_outlined),
+                            selectedIcon: const Icon(Icons.brightness_2_outlined),
+                          ),
+                        )
+                      ],
+                    );
+                  }, suggestionsBuilder:
+                  (BuildContext context, SearchController controller) {
+                return List<ListTile>.generate(5, (int index) {
+                  final String item = 'item $index';
+                  return ListTile(
+                    title: Text(item),
+                    onTap: () {
+                      setState(() {
+                        controller.closeView(item);
+                      });
+                    },
+                  );
+                });
+              }),
+            ),
+          ),
+        ),
+
 // Body of the widget using a StreamBuilder to listen for changes
 // in the cars collection and reflect them in the UI in real-time.
-      body: StreamBuilder<List<DiaryModel>>(
-        stream: diaryController.getUserDiaries(),
-        builder: (context, snapshot) {
+        body: StreamBuilder<List<DiaryModel>>(
+          stream: diaryController.getUserDiaries(),
+          builder: (context, snapshot) {
 // Show a loading indicator until data is fetched from Firestore.
-          if (!snapshot.hasData) return CircularProgressIndicator();
-          final diaries = snapshot.data!;
+            if (!snapshot.hasData) return CircularProgressIndicator();
+            final diaries = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: diaries.length,
-            itemBuilder: (context, index) {
-              final entry = diaries[index];
+            return ListView.builder(
+              itemCount: diaries.length,
+              itemBuilder: (context, index) {
+                final entry = diaries[index];
 
-              return Card(
-                margin: EdgeInsets.all(8.0),
-                child: GestureDetector(
-                  onLongPress: () {
-                    // Perform your action here when the Card is long-pressed.
-                    _showEditDialog(context, entry, index);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.description,
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 15),
-                        Text(
-                          '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        SizedBox(height: 15),
-                        Row(
-                          children: [
-                            RatingEvaluator(entry),
-                            Spacer(),
-                            Spacer(),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              color: Colors.black,
-                              onPressed: () {
-                                // widget.diaryController.deleteDiaryAtIndex(index);
-                                diaryController.deleteDiary(entry!.id);
+                return Card(
+                  margin: EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onLongPress: () {
+                      // Perform your action here when the Card is long-pressed.
+                      _showEditDialog(context, entry, index);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.description,
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 15),
+                          Text(
+                            '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          SizedBox(height: 15),
+                          Row(
+                            children: [
+                              RatingEvaluator(entry),
+                              Spacer(),
+                              Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.delete),
+                                color: Colors.black,
+                                onPressed: () {
+                                  // widget.diaryController.deleteDiaryAtIndex(index);
+                                  diaryController.deleteDiary(entry!.id);
 
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => DiaryLogView(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => DiaryLogView(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            );
+          },
+        ),
 // Floating action button to open a dialog for adding a new car.
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
 // Display the AddCarDialog when the button is pressed.
-          showDialog(
-            context: context,
-            builder: (context) => NewEntryView(),
-          );
-        },
-        child: Icon(Icons.add),
-      ),
+            showDialog(
+              context: context,
+              builder: (context) => NewEntryView(),
+            );
+          },
+          child: Icon(Icons.add),
+        ),
+      )
     );
   }
 }
@@ -263,4 +335,54 @@ class Month {
   int get Number {
     return num;
   }
+}
+
+Future<void> exportToPDF(DiaryController diaryController) async {
+  // Create a new PDF document
+  final pdf = pw.Document();
+
+  // Retrieve data from Hive
+  final firebaseFetchedDiaries = await diaryController.getUserDiaries();
+
+  List<pw.Widget> list =
+      await pdfTextChildren(firebaseFetchedDiaries as List<DiaryModel>);
+
+// In the Page build method:
+  // Populate the PDF content with data
+  pdf.addPage(
+    pw.Page(
+      build: (pw.Context context) {
+        return pw.Column(
+          children: list,
+        );
+      },
+    ),
+  );
+
+  // Save the PDF file
+  final directory = await getApplicationDocumentsDirectory();
+  print(directory);
+  final file = File('${directory.path}/hive_data.pdf');
+  // final file = File('fonts/hive_data.pdf');
+
+  await file.writeAsBytes(await pdf.save());
+}
+
+Future<List<pw.Widget>> pdfTextChildren(List<DiaryModel> entries) async {
+  List<pw.Widget> textList = [];
+  // final ttf = File('/Users/alirezarahnama/StudioProjects/dear_diary_with_hive/fonts/Pacifico-Regular.ttf').readAsBytesSync();
+  // final ttf = File('../../fonts/Pacifico-Regular.ttf').readAsBytesSync();
+  final fontData = await rootBundle.load('fonts/Pacifico-Regular.ttf');
+  final ttf = fontData.buffer.asUint8List();
+  final font = pw.Font.ttf(ttf.buffer.asByteData());
+
+  for (DiaryModel entry in entries) {
+    textList.add(
+      pw.Text(
+        'On ${DateFormat('yyyy-MM-dd').format(entry.dateTime)}, ${entry.description} was rated ${entry.rating} stars.',
+        style: pw.TextStyle(font: font, fontSize: 12),
+      ),
+    );
+  }
+  return textList;
 }

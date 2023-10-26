@@ -1,3 +1,4 @@
+import 'package:dear_diary_with_firebase_auth_storage_database/view/new_diary_log_view.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
