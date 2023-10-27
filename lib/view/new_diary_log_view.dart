@@ -1,9 +1,11 @@
 import 'package:dear_diary_with_firebase_auth_storage_database/view/auth_gate.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:dear_diary_with_firebase_auth_storage_database/controller/diary_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../model/diary_model.dart';
 import 'diary_entry_view.dart';
@@ -28,6 +30,37 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   bool isDark = false;
   List<DiaryModel> filteredEntries = [];
   final TextEditingController searchController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  XFile? _image;
+
+  Future<void> _pickImageFromGallery() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    setState(() {
+      _image = image;
+    });
+  }
+
+  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl() async {
+    if (_image == null) return null;
+    String? downloadURL = null;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return null;
+    final firebaseStorageRef = FirebaseStorage.instance
+        .ref()
+        .child('images/${currentUser.uid}/${_image!.name}');
+
+    try {
+      final uploadTask = await firebaseStorageRef.putFile(File(_image!.path));
+      if (uploadTask.state == TaskState.success) {
+        downloadURL = await firebaseStorageRef.getDownloadURL();
+
+        print("Uploaded to: $downloadURL");
+      }
+    } catch (e) {
+      print("Failed to upload image: $e");
+    }
+    return downloadURL;
+  }
 
   void _showEditDialog(BuildContext context, DiaryModel diaryEntry, int index) {
     TextEditingController descriptionEditingController =
@@ -65,6 +98,11 @@ class _DiaryLogViewState extends State<DiaryLogView> {
               controller: dateEditingController,
               decoration: InputDecoration(labelText: "New Date"),
               maxLines: null, // Allows multiple lines of text.
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => _pickImageFromGallery(),
+              child: Text('pick image from gallery'),
             )
           ]),
           actions: <Widget>[
@@ -76,7 +114,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
             ),
             TextButton(
               child: Text('Save'),
-              onPressed: () {
+              onPressed: () async {
                 // Save the edited content to the diary entry.
                 print("long pressed!");
                 diaryController.updateDiary(
@@ -85,6 +123,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                         description: descriptionEditingController.text,
                         rating: int.parse(ratingEditingController.text),
                         dateTime: DateTime.parse(dateEditingController.text),
+                        imagePath:
+                            await _uploadImageToFirebaseAndReturnDownlaodUrl(),
                         id: diaryEntry.id));
 
                 updateState();
@@ -101,7 +141,6 @@ class _DiaryLogViewState extends State<DiaryLogView> {
     final diaryEntries = await diaryController.getUserDiaries().first;
 
     setState(() {
-      // filteredEntries = [];
       if (selectedMonth?.Number == 0) {
         filteredEntries = diaryEntries;
       } else {
@@ -111,7 +150,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
               }).toList()
             : diaryEntries;
       }
-
+      print('filteredEntries.length: ${filteredEntries.length}');
       // Sort the filtered entries in reverse chronological order (newest first)
       filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
     });
@@ -119,14 +158,26 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 
   void applyFilterAndUpdateState() async {
     final diaryEntries = await diaryController.getUserDiaries().first;
-    // filteredEntries = [];
+    List<Month> months = [
+      Month(1, 'Jan'),
+      Month(2, 'Feb'),
+      Month(3, 'Mar'),
+      Month(4, 'Apr'),
+      Month(5, 'May'),
+      Month(6, 'Jun'),
+      Month(7, 'Jul'),
+      Month(8, 'Aug'),
+      Month(9, 'Sep'),
+      Month(10, 'Oct'),
+      Month(11, 'Nov'),
+      Month(12, 'Dec')
+    ];
     setState(() {
       if (searchController.text == null) {
         filteredEntries = diaryEntries;
       } else {
         filteredEntries = (searchController.text != null)
             ? diaryEntries.where((entry) {
-                print(searchController.text);
                 return entry.description
                     .toLowerCase()
                     .contains(searchController.text.toLowerCase());
@@ -138,12 +189,47 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
     });
   }
+  void applyFilterAndUpdateState2() async {
+    final diaryEntries = await diaryController.getUserDiaries().first;
+
+    setState(() {
+      if (selectedMonth == null || selectedMonth?.Number == 0) {
+        // If no month or "All" months are selected, show all diary entries.
+        filteredEntries = diaryEntries;
+      } else {
+        // Filter diary entries based on the selected month.
+        filteredEntries = diaryEntries.where((entry) {
+          print('entry.dateTime.month is ${entry.dateTime.month} and selectedMonth is: ${selectedMonth!.num} ');
+          return entry.dateTime.month == selectedMonth?.num;
+        }).toList();
+        print(filteredEntries);
+      }
+
+      // Apply an additional filter based on the search query.
+      filteredEntries = filteredEntries.where((entry) {
+        return entry.description
+            .toLowerCase()
+            .contains(searchController.text.toLowerCase());
+      }).toList();
+
+      // Sort the filtered entries in reverse chronological order (newest first).
+      filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    updateState(); // Initially, load all diary entries
+  }
 
   @override
   Widget build(BuildContext context) {
     final ThemeData themeData = ThemeData(
         useMaterial3: true,
         brightness: isDark ? Brightness.dark : Brightness.light);
+    // List<DiaryModel> filteredEntries = [];
+
     return Theme(
         data: themeData,
         child: Scaffold(
@@ -178,6 +264,43 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                   );
                 },
               ),
+              PopupMenuButton<Month>(
+                onSelected: (Month month) async {
+                  setState(() {
+                    selectedMonth = month;
+                  });
+                  applyFilterAndUpdateState2();
+                },
+                icon: Icon(
+                  Icons.filter_list,
+                  color: Colors.white,
+                ),
+                itemBuilder: (BuildContext context) {
+                  // Create a list of months for filtering
+                  final List<Month> months = [
+                    Month(0, 'All'), // January
+                    Month(1, 'Jan'), // February
+                    Month(2, 'Feb'), // March
+                    Month(3, 'Mar'), // April
+                    Month(4, 'Apr'), // May
+                    Month(5, 'May'), // June
+                    Month(6, 'Jun'), // July
+                    Month(7, 'Jul'), // August
+                    Month(8, 'Aug'), // September
+                    Month(9, 'Sep'), // October
+                    Month(10, 'Oct'), // November
+                    Month(11, 'Nov'), // December
+                    Month(12, 'Dec'), // December
+                  ];
+
+                  return months.map((Month month) {
+                    return PopupMenuItem<Month>(
+                      value: month,
+                      child: Text(month.Name),
+                    );
+                  }).toList();
+                },
+              ),
             ],
             bottom: PreferredSize(
               preferredSize: Size.fromHeight(48.0),
@@ -190,12 +313,12 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                     padding: const MaterialStatePropertyAll<EdgeInsets>(
                         EdgeInsets.symmetric(horizontal: 16.0)),
                     onChanged: (_) {
-                      applyFilterAndUpdateState();
+                      applyFilterAndUpdateState2();
                     },
                     leading: IconButton(
                         icon: Icon(Icons.search),
                         onPressed: () async {
-                          applyFilterAndUpdateState();
+                          applyFilterAndUpdateState2();
                         }),
                     trailing: <Widget>[
                       Tooltip(
@@ -238,9 +361,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
             builder: (context, snapshot) {
 // Show a loading indicator until data is fetched from Firestore.
               if (!snapshot.hasData) return CircularProgressIndicator();
-              // final diaries = snapshot.data!;
-              // final diaries = filteredEntries;
-              final diaries =
+
+              List<DiaryModel> diaries =
                   (!filteredEntries.isEmpty) ? filteredEntries : snapshot.data!;
 
               diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
@@ -262,6 +384,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            BuildImageFromUrl(entry),
                             Text(
                               entry.description,
                               style: TextStyle(
@@ -280,7 +403,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                                 Spacer(),
                                 IconButton(
                                   icon: Icon(Icons.delete),
-                                  color: Colors.black,
+                                  // color: Colors.black,
                                   onPressed: () {
                                     // widget.diaryController.deleteDiaryAtIndex(index);
                                     diaryController.deleteDiary(entry!.id);
@@ -316,6 +439,30 @@ class _DiaryLogViewState extends State<DiaryLogView> {
             child: Icon(Icons.add),
           ),
         ));
+  }
+}
+
+Widget BuildImageFromUrl(DiaryModel entry) {
+  if (entry.imagePath != null) {
+    // If entry.imagePath is not null, display the image from the network
+    // return Container(child: Image.network(entry.imagePath!),
+    //     height: 100, fit: BoxFit.cover );
+
+    return Card(
+      elevation: 4, // Add elevation for a card-like appearance
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8), // Add rounded corners
+        child: Image.network(
+          entry.imagePath!,
+          height: 200,
+          width: 400, // Set a fixed size for the image
+          fit: BoxFit.cover, // Adjust how the image is displayed
+        ),
+      ),
+    );
+  } else {
+    // If entry.imagePath is null, display a placeholder or an empty container
+    return Container(); // You can customize this to show a placeholder image
   }
 }
 
