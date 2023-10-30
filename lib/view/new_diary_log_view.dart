@@ -40,8 +40,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
     });
   }
 
-  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl() async {
-    if (_image == null) return null;
+  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl(String? existingImagePath) async {
+    if (_image == null) return existingImagePath;
     String? downloadURL = null;
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return null;
@@ -124,7 +124,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                         rating: int.parse(ratingEditingController.text),
                         dateTime: DateTime.parse(dateEditingController.text),
                         imagePath:
-                            await _uploadImageToFirebaseAndReturnDownlaodUrl(),
+                            await _uploadImageToFirebaseAndReturnDownlaodUrl(diaryEntry.imagePath),
                         id: diaryEntry.id));
 
                 updateState();
@@ -156,65 +156,89 @@ class _DiaryLogViewState extends State<DiaryLogView> {
     });
   }
 
-  void applyFilterAndUpdateState() async {
-    final diaryEntries = await diaryController.getUserDiaries().first;
-    List<Month> months = [
-      Month(1, 'Jan'),
-      Month(2, 'Feb'),
-      Month(3, 'Mar'),
-      Month(4, 'Apr'),
-      Month(5, 'May'),
-      Month(6, 'Jun'),
-      Month(7, 'Jul'),
-      Month(8, 'Aug'),
-      Month(9, 'Sep'),
-      Month(10, 'Oct'),
-      Month(11, 'Nov'),
-      Month(12, 'Dec')
+  void applyFilterAndUpdateState3() async {
+    List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
+
+    final diaryEntries = await diaryController.getUserDiaries().first;
+
     setState(() {
-      if (searchController.text == null) {
-        filteredEntries = diaryEntries;
+      // Initialize filteredEntries with a copy of diaryEntries
+      filteredEntries = List<DiaryModel>.from(diaryEntries);
+
+      // Filter based on the search query
+      // Or Filter based on the month if it matches one of the month abbreviations
+      if (searchController.text.isNotEmpty) {
+        filteredEntries = filteredEntries.where((entry) {
+          return entry.description
+                  .toLowerCase()
+                  .contains(searchController.text.toLowerCase()) ||
+              convertIntMonthToStringRepresentation(entry.dateTime.month)
+                  .contains(searchController.text.toLowerCase());
+        }).toList();
       } else {
-        filteredEntries = (searchController.text != null)
-            ? diaryEntries.where((entry) {
-                return entry.description
-                    .toLowerCase()
-                    .contains(searchController.text.toLowerCase());
-              }).toList()
-            : diaryEntries;
+        filteredEntries = filteredEntries.where((entry) {
+          return entry.dateTime.month == selectedMonth!.num;
+        }).toList();
       }
 
-      // Sort the filtered entries in reverse chronological order (newest first)
       filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
     });
   }
-  void applyFilterAndUpdateState2() async {
-    final diaryEntries = await diaryController.getUserDiaries().first;
 
-    setState(() {
-      if (selectedMonth == null || selectedMonth?.Number == 0) {
-        // If no month or "All" months are selected, show all diary entries.
-        filteredEntries = diaryEntries;
-      } else {
-        // Filter diary entries based on the selected month.
-        filteredEntries = diaryEntries.where((entry) {
-          print('entry.dateTime.month is ${entry.dateTime.month} and selectedMonth is: ${selectedMonth!.num} ');
-          return entry.dateTime.month == selectedMonth?.num;
-        }).toList();
-        print(filteredEntries);
-      }
-
-      // Apply an additional filter based on the search query.
-      filteredEntries = filteredEntries.where((entry) {
-        return entry.description
-            .toLowerCase()
-            .contains(searchController.text.toLowerCase());
-      }).toList();
-
-      // Sort the filtered entries in reverse chronological order (newest first).
-      filteredEntries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-    });
+  String convertIntMonthToStringRepresentation(int month) {
+    String representation = '';
+    switch (month) {
+      case 1:
+        representation = 'jan';
+        break;
+      case 2:
+        representation = 'feb';
+        break;
+      case 3:
+        representation = 'mar';
+        break;
+      case 4:
+        representation = 'apr';
+        break;
+      case 5:
+        representation = 'may';
+        break;
+      case 6:
+        representation = 'jun';
+        break;
+      case 7:
+        representation = 'jul';
+        break;
+      case 8:
+        representation = 'aug';
+        break;
+      case 9:
+        representation = 'sep';
+        break;
+      case 10:
+        representation = 'oct';
+        break;
+      case 11:
+        representation = 'nov';
+        break;
+      case 12:
+        representation = 'dec';
+        break;
+    }
+    return representation;
   }
 
   @override
@@ -269,7 +293,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                   setState(() {
                     selectedMonth = month;
                   });
-                  applyFilterAndUpdateState2();
+                  print("selectedMonth is ${selectedMonth!.name}");
+                  applyFilterAndUpdateState3();
                 },
                 icon: Icon(
                   Icons.filter_list,
@@ -312,13 +337,13 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                     controller: searchController,
                     padding: const MaterialStatePropertyAll<EdgeInsets>(
                         EdgeInsets.symmetric(horizontal: 16.0)),
-                    onChanged: (_) {
-                      applyFilterAndUpdateState2();
+                    onChanged: (_) async {
+                      applyFilterAndUpdateState3();
                     },
                     leading: IconButton(
                         icon: Icon(Icons.search),
                         onPressed: () async {
-                          applyFilterAndUpdateState2();
+                          applyFilterAndUpdateState3();
                         }),
                     trailing: <Widget>[
                       Tooltip(
