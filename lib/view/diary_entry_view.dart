@@ -12,7 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class NewEntryView extends StatefulWidget {
-  bool isDark = false;
+  bool isDark;
 
   NewEntryView.withInheritedTheme(this.isDark);
 
@@ -31,7 +31,7 @@ class _NewEntryViewState extends State<NewEntryView> {
   var diaryController = DiaryController();
   final ImagePicker _picker = ImagePicker();
   XFile? _image;
-  bool isDark = false;
+  late bool isDark;
 
   _NewEntryViewState.withInheritedTheme(bool isDark) {
     this.isDark = isDark;
@@ -116,11 +116,12 @@ class _NewEntryViewState extends State<NewEntryView> {
               content: Text('Entry successfully saved!'),
               backgroundColor: Colors.deepPurple),
         );
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => DiaryLogView()),
-        // );
-        Navigator.of(context).pop();
+        print('isDark in diary entry view is: $isDark');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => DiaryLogView.WithPersistedTheme(isDark)),
+        );
+
       } else if (!successfullyAdded) {
         // Show the error dialog when the button is pressed
         showDialog(

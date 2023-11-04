@@ -18,9 +18,15 @@ import 'package:path_provider/path_provider.dart';
 class DiaryLogView extends StatefulWidget {
 // Constructor to create a HomePage widget.
   DiaryLogView({Key? key}) : super(key: key);
-  static final isDark = _DiaryLogViewState().isDark;
+  bool isDark = false;
+
+  DiaryLogView.WithPersistedTheme(bool inheritedIsDark){
+    isDark = inheritedIsDark;
+    print("inherited isDark from DiaryEntryView is: $isDark");
+  }
+
   @override
-  State<DiaryLogView> createState() => _DiaryLogViewState();
+  State<DiaryLogView> createState() => _DiaryLogViewState.withPersistedTheme(isDark);
 
 
 }
@@ -29,11 +35,12 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 // Instance of CarService to interact with Firestore for CRUD operations on cars.
   final DiaryController diaryController = DiaryController();
   Month? selectedMonth;
-  bool isDark = false;
+  bool isDark;
   List<DiaryModel> filteredEntries = [];
   final TextEditingController searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   XFile? _image;
+  _DiaryLogViewState.withPersistedTheme(this.isDark);
 
   Future<void> _pickImageFromGallery() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -67,7 +74,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 
   void _showEditDialog(BuildContext context, DiaryModel diaryEntry, int index) {
     TextEditingController descriptionEditingController =
-        TextEditingController();
+    TextEditingController();
     descriptionEditingController.text = diaryEntry
         .description; // Initialize the text field with existing content.
 
@@ -127,8 +134,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                         rating: int.parse(ratingEditingController.text),
                         dateTime: DateTime.parse(dateEditingController.text),
                         imagePath:
-                            await _uploadImageToFirebaseAndReturnDownlaodUrl(
-                                diaryEntry.imagePath),
+                        await _uploadImageToFirebaseAndReturnDownlaodUrl(
+                            diaryEntry.imagePath),
                         id: diaryEntry.id));
 
                 updateState();
@@ -147,7 +154,9 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   }
 
   void updateState() async {
-    final diaryEntries = await diaryController.getUserDiaries().first;
+    final diaryEntries = await diaryController
+        .getUserDiaries()
+        .first;
 
     setState(() {
       if (selectedMonth?.Number == 0) {
@@ -155,8 +164,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       } else {
         filteredEntries = (selectedMonth != null)
             ? diaryEntries.where((entry) {
-                return entry.dateTime.month == selectedMonth!.Number;
-              }).toList()
+          return entry.dateTime.month == selectedMonth!.Number;
+        }).toList()
             : diaryEntries;
       }
       print('filteredEntries.length: ${filteredEntries.length}');
@@ -181,7 +190,9 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       'Dec'
     ];
 
-    final diaryEntries = await diaryController.getUserDiaries().first;
+    final diaryEntries = await diaryController
+        .getUserDiaries()
+        .first;
 
     setState(() {
       // Initialize filteredEntries with a copy of diaryEntries
@@ -192,8 +203,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
       if (searchController.text.isNotEmpty) {
         filteredEntries = filteredEntries.where((entry) {
           return entry.description
-                  .toLowerCase()
-                  .contains(searchController.text.toLowerCase()) ||
+              .toLowerCase()
+              .contains(searchController.text.toLowerCase()) ||
               convertIntMonthToStringRepresentation(entry.dateTime.month)
                   .contains(searchController.text.toLowerCase());
         }).toList();
@@ -253,7 +264,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
   @override
   void initState() {
     super.initState();
-    updateState(); // Initially, load all diary entries
+    // updateState(); // Initially, load all diary entries
   }
 
   @override
@@ -397,7 +408,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
               if (!snapshot.hasData) return CircularProgressIndicator();
 
               List<DiaryModel> diaries =
-                  (!filteredEntries.isEmpty) ? filteredEntries : snapshot.data!;
+              (!filteredEntries.isEmpty) ? filteredEntries : snapshot.data!;
               diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
               DateTime? lastDate;
@@ -410,7 +421,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                       entry.dateTime.month != lastDate?.month ||
                       entry.dateTime.year != lastDate?.year) {
                     final headerText =
-                        DateFormat('MMMM yyyy').format(entry.dateTime);
+                    DateFormat('MMMM yyyy').format(entry.dateTime);
                     lastDate = entry.dateTime!;
                     return Column(
                       children: [
@@ -437,7 +448,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                                   ),
                                   SizedBox(height: 15),
                                   Text(
-                                    '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                                    '${DateFormat('yyyy-MM-dd').format(
+                                        entry.dateTime)}',
                                     style: TextStyle(fontSize: 14),
                                   ),
                                   SizedBox(height: 15),
@@ -448,18 +460,29 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                                       Spacer(),
                                       IconButton(
                                         icon: Icon(Icons.delete),
-                                        onPressed: () {
+                                        onPressed: () async {
                                           // widget.diaryController.deleteDiaryAtIndex(index);
                                           diaryController
                                               .deleteDiary(entry!.id);
 
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  DiaryLogView(),
-                                            ),
-                                          );
+                                          final diaryEntries = await diaryController
+                                              .getUserDiaries()
+                                              .first;
+
+                                          setState(() {
+                                            // Initialize filteredEntries with a copy of diaryEntries
+                                            filteredEntries =
+                                            List<DiaryModel>.from(diaryEntries);
+                                          });
+
+                                          // Navigator.of(context).pop();
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //     builder: (context) =>
+                                          //         DiaryLogView(),
+                                          //   ),
+                                          // );
                                         },
                                       ),
                                     ],
@@ -494,7 +517,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                               ),
                               SizedBox(height: 15),
                               Text(
-                                '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                                '${DateFormat('yyyy-MM-dd').format(
+                                    entry.dateTime)}',
                                 style: TextStyle(fontSize: 14),
                               ),
                               SizedBox(height: 15),
@@ -622,7 +646,7 @@ Future<void> exportToPDF(DiaryController diaryController) async {
   final firebaseFetchedDiaries = await diaryController.getUserDiaries();
 
   List<pw.Widget> list =
-      await pdfTextChildren(firebaseFetchedDiaries as List<DiaryModel>);
+  await pdfTextChildren(firebaseFetchedDiaries as List<DiaryModel>);
 
 // In the Page build method:
   // Populate the PDF content with data
@@ -647,8 +671,7 @@ Future<void> exportToPDF(DiaryController diaryController) async {
 
 Future<List<pw.Widget>> pdfTextChildren(List<DiaryModel> entries) async {
   List<pw.Widget> textList = [];
-  // final ttf = File('/Users/alirezarahnama/StudioProjects/dear_diary_with_hive/fonts/Pacifico-Regular.ttf').readAsBytesSync();
-  // final ttf = File('../../fonts/Pacifico-Regular.ttf').readAsBytesSync();
+
   final fontData = await rootBundle.load('fonts/Pacifico-Regular.ttf');
   final ttf = fontData.buffer.asUint8List();
   final font = pw.Font.ttf(ttf.buffer.asByteData());
@@ -656,7 +679,8 @@ Future<List<pw.Widget>> pdfTextChildren(List<DiaryModel> entries) async {
   for (DiaryModel entry in entries) {
     textList.add(
       pw.Text(
-        'On ${DateFormat('yyyy-MM-dd').format(entry.dateTime)}, ${entry.description} was rated ${entry.rating} stars.',
+        'On ${DateFormat('yyyy-MM-dd').format(entry.dateTime)}, ${entry
+            .description} was rated ${entry.rating} stars.',
         style: pw.TextStyle(font: font, fontSize: 12),
       ),
     );
