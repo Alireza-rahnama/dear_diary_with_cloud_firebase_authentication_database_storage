@@ -1,7 +1,7 @@
 import 'package:dear_diary_with_firebase_auth_storage_database/view/auth_gate.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:dear_diary_with_firebase_auth_storage_database/controller/diary_controller.dart';
+import 'package:dear_diary_with_firebase_auth_storage_database/controller/diary_entry_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,10 +17,12 @@ import 'package:path_provider/path_provider.dart';
 /// and manage their cars after authentication.
 class DiaryLogView extends StatefulWidget {
 // Constructor to create a HomePage widget.
-  const DiaryLogView({Key? key}) : super(key: key);
-
+  DiaryLogView({Key? key}) : super(key: key);
+  static final isDark = _DiaryLogViewState().isDark;
   @override
   State<DiaryLogView> createState() => _DiaryLogViewState();
+
+
 }
 
 class _DiaryLogViewState extends State<DiaryLogView> {
@@ -131,6 +133,11 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 
                 updateState();
                 Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Center(child: Text('Entry successfully saved!')),
+                      backgroundColor: Colors.deepPurple),
+                );
               },
             ),
           ],
@@ -528,7 +535,7 @@ class _DiaryLogViewState extends State<DiaryLogView> {
 // Display the AddNewDiary when the button is pressed.
               showDialog(
                 context: context,
-                builder: (context) => NewEntryView(),
+                builder: (context) => NewEntryView.withInheritedTheme(isDark),
               );
             },
             child: Icon(Icons.add),
