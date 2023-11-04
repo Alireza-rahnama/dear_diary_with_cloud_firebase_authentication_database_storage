@@ -40,7 +40,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
     });
   }
 
-  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl(String? existingImagePath) async {
+  Future<String?> _uploadImageToFirebaseAndReturnDownlaodUrl(
+      String? existingImagePath) async {
     if (_image == null) return existingImagePath;
     String? downloadURL = null;
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -124,7 +125,8 @@ class _DiaryLogViewState extends State<DiaryLogView> {
                         rating: int.parse(ratingEditingController.text),
                         dateTime: DateTime.parse(dateEditingController.text),
                         imagePath:
-                            await _uploadImageToFirebaseAndReturnDownlaodUrl(diaryEntry.imagePath),
+                            await _uploadImageToFirebaseAndReturnDownlaodUrl(
+                                diaryEntry.imagePath),
                         id: diaryEntry.id));
 
                 updateState();
@@ -379,75 +381,143 @@ class _DiaryLogViewState extends State<DiaryLogView> {
             ),
           ),
 
-// Body of the widget using a StreamBuilder to listen for changes
-// in the diary collection and reflect them in the UI in real-time.
+          // Body of the widget using a StreamBuilder to listen for changes
+          // in the diary collection and reflect them in the UI in real-time.
           body: StreamBuilder<List<DiaryModel>>(
             stream: diaryController.getUserDiaries(),
             builder: (context, snapshot) {
-// Show a loading indicator until data is fetched from Firestore.
+              // Show a loading indicator until data is fetched from Firestore.
               if (!snapshot.hasData) return CircularProgressIndicator();
 
               List<DiaryModel> diaries =
                   (!filteredEntries.isEmpty) ? filteredEntries : snapshot.data!;
-
               diaries.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+              DateTime? lastDate;
 
               return ListView.builder(
                 itemCount: diaries.length,
                 itemBuilder: (context, index) {
                   final entry = diaries[index];
+                  if (lastDate == null ||
+                      entry.dateTime.month != lastDate?.month ||
+                      entry.dateTime.year != lastDate?.year) {
+                    final headerText =
+                        DateFormat('MMMM yyyy').format(entry.dateTime);
+                    lastDate = entry.dateTime!;
+                    return Column(
+                      children: [
+                        DateHeader(text: headerText),
+                        Card(
+                          margin: EdgeInsets.all(8.0),
+                          child: GestureDetector(
+                            onLongPress: () {
+                              // Perform your action here when the Card is long-pressed.
+                              _showEditDialog(context, entry, index);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  BuildImageFromUrl(entry),
+                                  Text(
+                                    entry.description,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 15),
+                                  Text(
+                                    '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  SizedBox(height: 15),
+                                  Row(
+                                    children: [
+                                      RatingEvaluator(entry),
+                                      Spacer(),
+                                      Spacer(),
+                                      IconButton(
+                                        icon: Icon(Icons.delete),
+                                        onPressed: () {
+                                          // widget.diaryController.deleteDiaryAtIndex(index);
+                                          diaryController
+                                              .deleteDiary(entry!.id);
 
-                  return Card(
-                    margin: EdgeInsets.all(8.0),
-                    child: GestureDetector(
-                      onLongPress: () {
-                        // Perform your action here when the Card is long-pressed.
-                        _showEditDialog(context, entry, index);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BuildImageFromUrl(entry),
-                            Text(
-                              entry.description,
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 15),
-                            Text(
-                              '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            SizedBox(height: 15),
-                            Row(
-                              children: [
-                                RatingEvaluator(entry),
-                                Spacer(),
-                                Spacer(),
-                                IconButton(
-                                  icon: Icon(Icons.delete),
-                                  // color: Colors.black,
-                                  onPressed: () {
-                                    // widget.diaryController.deleteDiaryAtIndex(index);
-                                    diaryController.deleteDiary(entry!.id);
-
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => DiaryLogView(),
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  DiaryLogView(),
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Card(
+                      margin: EdgeInsets.all(8.0),
+                      child: GestureDetector(
+                        onLongPress: () {
+                          // Perform your action here when the Card is long-pressed.
+                          _showEditDialog(context, entry, index);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              BuildImageFromUrl(entry),
+                              Text(
+                                entry.description,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 15),
+                              Text(
+                                '${DateFormat('yyyy-MM-dd').format(entry.dateTime)}',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              SizedBox(height: 15),
+                              Row(
+                                children: [
+                                  RatingEvaluator(entry),
+                                  Spacer(),
+                                  Spacer(),
+                                  IconButton(
+                                    icon: Icon(Icons.delete),
+                                    onPressed: () {
+                                      // widget.diaryController.deleteDiaryAtIndex(index);
+                                      diaryController.deleteDiary(entry!.id);
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => DiaryLogView(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 },
               );
             },
@@ -585,4 +655,21 @@ Future<List<pw.Widget>> pdfTextChildren(List<DiaryModel> entries) async {
     );
   }
   return textList;
+}
+
+class DateHeader extends StatelessWidget {
+  final String text;
+
+  const DateHeader({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        padding: EdgeInsets.all(8.0),
+        child: Text(text,
+            style: GoogleFonts.pacifico(
+              color: Colors.deepPurple,
+              fontSize: 30.0,
+            )));
+  }
 }
