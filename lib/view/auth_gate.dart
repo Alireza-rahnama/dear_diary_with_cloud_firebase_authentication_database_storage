@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 
 import 'diary_entry_view.dart';
-import 'new_diary_log_view.dart';
+import 'diary_list_view..dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
