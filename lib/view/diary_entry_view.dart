@@ -93,7 +93,11 @@ class _NewEntryViewState extends State<NewEntryView> {
     if (description == '') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Center(child: Text('Description can not be left empty!')),
+            content: Center(child: Text('Description can not be left empty!',
+                    style: TextStyle(
+                      color: Colors.white, // Customize the hint text color
+                      fontSize: 12, // Customize the hint text font size
+                    ))),
             backgroundColor: Colors.deepPurple),
       );
       return;
@@ -113,7 +117,11 @@ class _NewEntryViewState extends State<NewEntryView> {
       if (successfullyAdded) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Entry successfully saved!'),
+              content: Center(child: Text('Entry successfully saved!',
+              style: TextStyle(
+                color: Colors.white, // Customize the hint text color
+                fontSize: 12, // Customize the hint text font size
+              ))),
               backgroundColor: Colors.deepPurple),
         );
         print('isDark in diary entry view is: $isDark');
