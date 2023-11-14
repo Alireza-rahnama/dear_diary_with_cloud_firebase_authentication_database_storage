@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCkZ3cz2VzJ-fOCTmilVy9Jk6POhU2U_LU',
-    appId: '1:1075040481167:android:a5fc3ca7fda63b9143e5fa',
+    appId: '1:1075040481167:android:892a79fca0576a8143e5fa',
     messagingSenderId: '1075040481167',
     projectId: 'final-dear-diary-project',
     storageBucket: 'final-dear-diary-project.appspot.com',
@@ -62,11 +62,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD_11XpWaSB2J3wD1YzifGKpy3lmXYJPNc',
-    appId: '1:1075040481167:ios:ea186f3c619f229e43e5fa',
+    appId: '1:1075040481167:ios:231ef061aa55374243e5fa',
     messagingSenderId: '1075040481167',
     projectId: 'final-dear-diary-project',
     storageBucket: 'final-dear-diary-project.appspot.com',
-    iosBundleId: 'com.alireza.dearDiaryWithFirebaseAuthStorageDatabase',
+    iosClientId: '1075040481167-kdppkjoopdal97coe2kvicblncdrdt9s.apps.googleusercontent.com',
+    iosBundleId: 'com.example.fixingFlutter',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -75,6 +76,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1075040481167',
     projectId: 'final-dear-diary-project',
     storageBucket: 'final-dear-diary-project.appspot.com',
+    iosClientId: '1075040481167-46efefuceg3urs8j5sd9i377gho0ukim.apps.googleusercontent.com',
     iosBundleId: 'com.alireza.dearDiaryWithFirebaseAuthStorageDatabase.RunnerTests',
   );
 }

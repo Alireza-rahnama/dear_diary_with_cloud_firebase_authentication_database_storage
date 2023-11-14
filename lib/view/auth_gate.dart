@@ -1,9 +1,11 @@
+import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
 import 'package:flutter/material.dart'hide EmailAuthProvider;
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 
 import 'diary_entry_view.dart';
 import 'diary_list_view..dart';
+import 'diary_list_view2.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -50,11 +52,14 @@ class AuthGate extends StatelessWidget {
             },
             providers: [
               EmailAuthProvider(), // new
-              // GoogleProvider(clientId: "1075040481167-nr1bg35jvthus95pl1skk617tfas6vme.apps.googleusercontent.com"),  // new
+              GoogleProvider(clientId: "1075040481167-nr1bg35jvthus95pl1skk617tfas6vme.apps.googleusercontent.com"),  // new
             ],
           );
         } else {
-          return Center(child: DiaryLogView());
+          return Center(child:
+          // DiaryLogView()
+          DiaryLogView2()
+          );
         }
       },
     );
