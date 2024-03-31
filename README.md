@@ -2,3 +2,5 @@
 
 Find the application's demo on [Youtube](https://youtu.be/K8IjSxE23rQ).
 
+![Demo](dearDiaryWithFirebase.gif)
+
